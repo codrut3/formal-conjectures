@@ -118,6 +118,21 @@ function applyFilters() {
       if (bDiff === null) return -1;
       return bDiff - aDiff || a.theorem.localeCompare(b.theorem);
     }
+    if (state.sort === 'most-liked' && FC.reactionCount) {
+      const aLikes = FC.reactionCount.get(a.theorem).count;
+      const bLikes = FC.reactionCount.get(b.theorem).count;
+      return bLikes - aLikes || a.theorem.localeCompare(b.theorem);
+    }
+    if ((state.sort === 'prediction-true' || state.sort === 'prediction-false') && FC.reactionCount) {
+      const aVote = FC.reactionCount.get(a.theorem);
+      const bVote = FC.reactionCount.get(b.theorem);
+      const aScore = aVote.thumbsUp - aVote.thumbsDown;
+      const bScore = bVote.thumbsUp - bVote.thumbsDown;
+      const aTotal = aVote.thumbsUp + aVote.thumbsDown;
+      const bTotal = bVote.thumbsUp + bVote.thumbsDown;
+      const dir = state.sort === 'prediction-true' ? -1 : 1;
+      return dir * (aScore - bScore) || bTotal - aTotal || a.theorem.localeCompare(b.theorem);
+    }
     if (state.sort === 'category')   return a.category.localeCompare(b.category) || a.theorem.localeCompare(b.theorem);
     if (state.sort === 'collection') return a.collection.localeCompare(b.collection) || a.theorem.localeCompare(b.theorem);
     return a.theorem.localeCompare(b.theorem);
@@ -160,6 +175,8 @@ function renderCard(c, index) {
       <div class="theorem-card__badge">
         ${FC.voting ? FC.voting.renderCardVoteCount(c.theorem) : ''}
         ${FC.voting ? FC.voting.renderCardDifficulty(c.theorem) : ''}
+        ${FC.reactionCount ? FC.reactionCount.renderCardVoteCount(c.theorem) : ''}
+        ${FC.reactionCount ? FC.reactionCount.renderCardTruth(c.theorem) : ''}
         <span class="badge ${catMeta.css}">${FC.escapeHTML(catMeta.label)}</span>
         <button class="statement-toggle" type="button" aria-expanded="true" aria-controls="${previewId}">
           <span class="statement-toggle__text">Hide statement</span>
@@ -353,6 +370,11 @@ async function init() {
     syncCheckboxes();
     update();
   });
+
+  window.addEventListener('fc:discussions-updated', function () {
+    update();
+  }, { once: true });
+  if (FC.reactionCount) FC.reactionCount.init();
 
   // Initial render
   applyFilters();

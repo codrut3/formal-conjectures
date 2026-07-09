@@ -1026,6 +1026,17 @@ a.sibling-item__name:hover { color: var(--color-link); text-decoration: none; }
   font-variant-numeric: tabular-nums;
 }
 
+.theorem-card__truth {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  margin-right: 0.5rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 .auth-prompt {
   font-size: 0.8rem;
   color: var(--color-text-muted);

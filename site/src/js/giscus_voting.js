@@ -26,6 +26,8 @@
         function buildCss() {
           var labelCss = '';
           var pos = 0;
+          // Overwrite the label next to the emoji and hide filtered emojis
+          // For this we need to know which reactions are currently displayed (lastReactions)
           for (var i = 0; i < REACTION_ORDER.length; i++) {
             var key = REACTION_ORDER[i];
             var group = lastReactions[key];
@@ -52,15 +54,41 @@
           );
         }
 
-        // Re-apply with correct labels whenever reaction counts change
+        function reactionsChanged(newReactions, oldReactions) {
+          for (var i = 0; i < REACTION_ORDER.length; i++) {
+            var key = REACTION_ORDER[i];
+            var newCount = (newReactions[key] && newReactions[key].count) || 0;
+            var oldCount = (oldReactions[key] && oldReactions[key].count) || 0;
+            if (newCount !== oldCount) return true;
+          }
+          return false;
+        }
+
         window.addEventListener('message', function(event) {
           if (typeof event.data !== 'object' || !event.data.giscus) return;
           var discussion = event.data.giscus.discussion;
           if (!discussion || !discussion.reactions) return;
+          if (!reactionsChanged(discussion.reactions, lastReactions)) return;
           lastReactions = discussion.reactions;
+          // Recompute reaction labels whenever counts change
           sendTheme();
+
+          // Save current reaction count in the cache.
+          // Giscus transmits the most recent count on the theorem.
+          var theoremName = document.querySelector('meta[property="og:title"]') &&
+            document.querySelector('meta[property="og:title"]').content;
+          if (theoremName) {
+            var cache = JSON.parse(localStorage.getItem('fc_discussions_cache') || '{}');
+            cache[theoremName] = {
+              count:      (lastReactions.HEART       && lastReactions.HEART.count)       || 0,
+              thumbsUp:   (lastReactions.THUMBS_UP   && lastReactions.THUMBS_UP.count)   || 0,
+              thumbsDown: (lastReactions.THUMBS_DOWN && lastReactions.THUMBS_DOWN.count) || 0,
+            };
+            localStorage.setItem('fc_discussions_cache', JSON.stringify(cache));
+          }
         });
 
+        // Ensure the giscus theme is applied after giscus iframe is loaded
         function waitAndApply() {
           window.addEventListener('message', function onReady(event) {
             if (typeof event.data !== 'object' || !event.data.giscus || !event.data.giscus.resizeHeight) return;
